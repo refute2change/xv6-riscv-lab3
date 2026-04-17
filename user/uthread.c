@@ -11,9 +11,28 @@
 #define MAX_THREAD  4
 
 
+struct context {
+  /*  0 */ uint64 ra;
+  /*  8 */ uint64 sp;
+  /* 16 */ uint64 s0;
+  /* 24 */ uint64 s1;
+  /* 32 */ uint64 s2;
+  /* 40 */ uint64 s3;
+  /* 48 */ uint64 s4;
+  /* 56 */ uint64 s5;
+  /* 64 */ uint64 s6;
+  /* 72 */ uint64 s7;
+  /* 80 */ uint64 s8;
+  /* 88 */ uint64 s9;
+  /* 96 */ uint64 s10;
+  /*104 */ uint64 s11;
+}; //registers saved for thread switching
+// note that only callee-saved registers are saved in context
+// this is because the thread_switch() function, which performs the context switch,
 struct thread {
   char       stack[STACK_SIZE]; /* the thread's stack */
   int        state;             /* FREE, RUNNING, RUNNABLE */
+  struct context context;        /* swtch() here to run thread */
 };
 struct thread all_thread[MAX_THREAD];
 struct thread *current_thread;
@@ -60,20 +79,29 @@ thread_schedule(void)
      * Invoke thread_switch to switch from t to next_thread:
      * thread_switch(??, ??);
      */
+    thread_switch((uint64) &t->context, (uint64) &next_thread->context);
   } else
     next_thread = 0;
 }
 
 void 
-thread_create(void (*func)())
+thread_create(void (*func)()) //initiate a new thread, along with its stack and registers
 {
   struct thread *t;
 
   for (t = all_thread; t < all_thread + MAX_THREAD; t++) {
     if (t->state == FREE) break;
   }
+  if (t == all_thread + MAX_THREAD) {
+    printf("thread_create: no free threads\n");
+    exit(-1);
+  } // if no free slots, exit
   t->state = RUNNABLE;
   // YOUR CODE HERE
+  t->context.sp = (uint64) t->stack + STACK_SIZE; // initialize the thread's stack pointer to the top of its stack
+  t->context.ra = (uint64) func; // set the thread's return address to the function that the thread should execute
+  t->context.s0 = t->context.s1 = t->context.s2 = t->context.s3 = t->context.s4 = t->context.s5 = t->context.s6 = t->context.s7 = t->context.s8 = t->context.s9 = t->context.s10 = t->context.s11 = 0; // initialize the thread's callee-saved registers to 0
+  // printf("thread_create: created thread with stack pointer %p and return address %p\n", t->context.sp, t->context.ra);
 }
 
 void 
@@ -155,6 +183,8 @@ main(int argc, char *argv[])
   thread_create(thread_a);
   thread_create(thread_b);
   thread_create(thread_c);
+  current_thread = &all_thread[0];
+  all_thread[0].state = RUNNING;
   current_thread->state = FREE;
   thread_schedule();
   exit(0);
