@@ -1,0 +1,21 @@
+1. The Setup
+
+Thread 1 is inserting Key 10.
+Thread 2 is inserting Key 50010.
+Both keys hash to the same bucket, 10 % 5 = 50010 % 5 = 0.
+Currently, table[0] points to some entry, say 5.
+
+2. The Execution Sequence
+
+Thread 1 calls put(10, 1) and identifies bucket 0.
+Thread 2 calls put(50010, 2) and identifies bucket 0.
+Thread 1 executes insert(10, 1, &table[0], table[0]). Inside insert, it reads table[0] (which is 5) and assigns it to its new entry's next pointer (e->next = n).
+Thread 2 (running on a different core) simultaneously executes insert. It also reads the same value of table[0], which is 5 and assigns it to its new entry's next pointer.
+Thread 1 completes the insert by writing its new memory address to table[0]. Now table[0] points to 10.
+Thread 2 completes its insert and writes its memory address to table[0].
+
+3. The Result
+
+table[0] now points to 500q0.
+Next pointer points to the original entry of 5.
+10 is now lost: it should also point to 5, but there is no longer any pointer in the entire program that points to 10. It has been "overwritten" in the table[0] slot by Thread 2.
