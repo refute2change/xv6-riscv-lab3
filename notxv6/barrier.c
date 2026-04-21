@@ -32,13 +32,16 @@ barrier()
   //
   assert(pthread_mutex_lock(&bstate.barrier_mutex) == 0);
   bstate.nthread++;
+  int current_round = bstate.round;
   if (bstate.nthread == nthread){
-    assert(pthread_cond_broadcast(&bstate.barrier_cond) == 0);
     bstate.nthread = 0;
     bstate.round++;
+    assert(pthread_cond_broadcast(&bstate.barrier_cond) == 0);
   }
   else{
-    assert(pthread_cond_wait(&bstate.barrier_cond, &bstate.barrier_mutex) == 0);
+    while (current_round == bstate.round){
+      assert(pthread_cond_wait(&bstate.barrier_cond, &bstate.barrier_mutex) == 0);
+    }
   }
   assert(pthread_mutex_unlock(&bstate.barrier_mutex) == 0);
 }
