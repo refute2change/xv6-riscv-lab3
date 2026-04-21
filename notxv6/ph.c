@@ -5,7 +5,7 @@
 #include <pthread.h>
 #include <sys/time.h>
 
-#define NBUCKET 1001
+#define NBUCKET 3001
 #define NKEYS 100000
 
 pthread_mutex_t lock[NBUCKET];
